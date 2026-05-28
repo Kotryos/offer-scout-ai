@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: scout-agent
+  ai:
+    model:
+      embedding: none
+    openai:
+      api-key: ${GROQ_API_KEY}
+      base-url: https://api.groq.com/openai
+      chat:
+        options:
+          model: llama-3.3-70b-versatile
+          parallel-tool-calls: false
+
+tavily:
+  api-key: ${TAVILY_API_KEY}
+  search-base-url: https://api.tavily.com/search
+
+jina:
+  api-key: ${JINA_API_KEY:}
+  reader-base-url: https://r.jina.ai
+
+web-integration-commons:
+  max-content-length: 4000
+  timeout: 15s
+
+logging:
+  pattern:
+    level: "%5p [cid:%X{correlationId:-none}]"

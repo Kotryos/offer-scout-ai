@@ -1,0 +1,34 @@
+# Gradle
+.gradle/
+.kotlin/
+build/
+!scout-agent/gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Secrets and local config
+.env
+!.env.example
+**/application-local.yml
+credentials.json
+token.json
+
+# OS
+.DS_Store
+Thumbs.db

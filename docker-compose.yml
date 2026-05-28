@@ -1,0 +1,10 @@
+services:
+  scout-agent:
+    build:
+      context: ./scout-agent
+    ports:
+      - "8080:8080"
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      JINA_API_KEY: ${JINA_API_KEY:-}

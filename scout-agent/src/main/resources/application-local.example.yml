@@ -1,0 +1,7 @@
+GROQ_API_KEY: gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TAVILY_API_KEY: tvly-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# JINA_API_KEY: jina_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+logging:
+  level:
+    com.github.constantinet.offerscoutai.agent: DEBUG
