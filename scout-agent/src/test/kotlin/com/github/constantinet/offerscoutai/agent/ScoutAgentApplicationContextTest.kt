@@ -16,7 +16,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
         "tavily.search-base-url=https://example.com/tavily",
         "jina.api-key=",
         "jina.reader-base-url=https://example.com/jina",
-        "web-integration-commons.max-content-length=4000",
+        "web-integration-commons.max-page-content-length=6000",
+        "web-integration-commons.max-search-results=3",
+        "web-integration-commons.max-search-result-content-length=500",
         "web-integration-commons.timeout=15s",
     ],
 )

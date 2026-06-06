@@ -100,6 +100,21 @@ class EvaluationEndpointTest {
     }
 
     @Test
+    fun `maps invalid ai tool call errors through global exception handler`() {
+        `when`(evaluationService.evaluate(OFFER_TEXT, PROFILE_CONTEXT))
+            .thenReturn(Mono.error(NonTransientAiException("HTTP 400 code=tool_use_failed")))
+
+        client.post()
+            .uri("/offer/evaluation")
+            .bodyValue(requestBody())
+            .exchange()
+            .expectStatus().isEqualTo(502)
+            .expectBody()
+            .jsonPath("$.error").isEqualTo(GlobalExceptionHandler.CODE_AI_TOOL_CALL_ERROR)
+            .jsonPath("$.message").isEqualTo(GlobalExceptionHandler.MSG_AI_TOOL_CALL_ERROR)
+    }
+
+    @Test
     fun `maps generic non transient ai errors through global exception handler`() {
         `when`(evaluationService.evaluate(OFFER_TEXT, PROFILE_CONTEXT))
             .thenReturn(Mono.error(NonTransientAiException("model failed")))
@@ -159,7 +174,7 @@ class EvaluationEndpointTest {
 
     companion object {
         private const val CORRELATION_ID = "test-correlation-id"
-        private const val OFFER_TEXT = "Kotlin Spring job"
-        private const val PROFILE_CONTEXT = "Senior Kotlin developer"
+        private const val OFFER_TEXT = "Java job"
+        private const val PROFILE_CONTEXT = "Senior Java developer"
     }
 }

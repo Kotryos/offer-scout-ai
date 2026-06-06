@@ -58,7 +58,9 @@ data class JinaProperties(
 @ConfigurationProperties(prefix = "web-integration-commons")
 data class WebIntegrationProperties(
     val timeout: Duration,
-    val maxContentLength: Int
+    val maxPageContentLength: Int,
+    val maxSearchResults: Int,
+    val maxSearchResultContentLength: Int,
 )
 
 class TavilySearchClient(val client: WebClient) : WebClient by client

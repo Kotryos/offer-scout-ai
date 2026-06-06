@@ -18,6 +18,10 @@ class GlobalExceptionHandler {
         log.error("Non-transient AI error", ex)
 
         return when {
+            msg.contains("tool_use_failed") ->
+                ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(mapOf("error" to CODE_AI_TOOL_CALL_ERROR, "message" to MSG_AI_TOOL_CALL_ERROR))
+
             msg.contains("429") || msg.contains("RESOURCE_EXHAUSTED") || msg.lowercase().contains("quota") ->
                 ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(mapOf("error" to CODE_QUOTA_EXCEEDED, "message" to MSG_PLEASE_TRY_LATER))
@@ -57,6 +61,7 @@ class GlobalExceptionHandler {
 
         const val CODE_QUOTA_EXCEEDED = "QUOTA_EXCEEDED"
         const val CODE_INVALID_API_KEY = "INVALID_API_KEY"
+        const val CODE_AI_TOOL_CALL_ERROR = "AI_TOOL_CALL_ERROR"
         const val CODE_AI_ERROR = "AI_ERROR"
         const val CODE_AI_UNAVAILABLE = "AI_UNAVAILABLE"
         const val CODE_UPSTREAM_ERROR = "UPSTREAM_ERROR"
@@ -64,6 +69,7 @@ class GlobalExceptionHandler {
 
         const val MSG_PLEASE_TRY_LATER = "Please try again later"
         const val MSG_INVALID_CONFIGURATION = "Invalid configuration"
+        const val MSG_AI_TOOL_CALL_ERROR = "The AI model produced an invalid tool call"
         const val MSG_UNEXPECTED_AI_ERROR = "An unexpected AI service error occurred"
         const val MSG_AI_UNAVAILABLE = "AI service temporarily unavailable"
         const val UPSTREAM_MSG_PREFIX = "Upstream service returned "

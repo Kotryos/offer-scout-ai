@@ -73,35 +73,43 @@ class TavilyJinaWebIntegrationServiceTest {
     }
 
     @Test
-    fun `searchWeb truncates long formatted result`() {
+    fun `searchWeb limits result count and content length`() {
         val service = service(
             tavilyResponse = jsonResponse(
                 """
                 {
                   "results": [
                     {
-                      "title": "ExampleCo News",
-                      "url": "https://example.com/news",
-                      "content": "Long company update"
+                      "title": "ExampleCo First",
+                      "url": "https://example.com/first",
+                      "content": "abcdef"
+                    },
+                    {
+                      "title": "ExampleCo Second",
+                      "url": "https://example.com/second",
+                      "content": "uvwxyz"
                     }
                   ]
                 }
                 """.trimIndent()
             ),
-            maxContentLength = 20,
+            maxSearchResults = 1,
+            maxSearchResultContentLength = 3,
         )
 
         StepVerifier.create(service.searchWeb(TEST_COMPANY_QUERY))
             .assertNext { result ->
-                assertThat(result).hasSize(20)
-                assertThat(result).startsWith("**ExampleCo News**")
+                assertThat(result).contains("**ExampleCo First**")
+                assertThat(result).contains("abc")
+                assertThat(result).doesNotContain("def")
+                assertThat(result).doesNotContain("ExampleCo Second")
             }
             .verifyComplete()
     }
 
     @Test
     fun `fetchPage trims and truncates content`() {
-        val service = service(jinaResponse = textResponse("  abcdef  "), maxContentLength = 4)
+        val service = service(jinaResponse = textResponse("  abcdef  "), maxPageContentLength = 4)
 
         StepVerifier.create(service.fetchPage("https://example.com/job"))
             .expectNext("abcd")
@@ -138,7 +146,9 @@ class TavilyJinaWebIntegrationServiceTest {
     private fun service(
         tavilyResponse: Mono<ClientResponse> = Mono.just(jsonResponse("""{"results": []}""")),
         jinaResponse: Mono<ClientResponse> = Mono.just(textResponse("page content")),
-        maxContentLength: Int = 4000,
+        maxPageContentLength: Int = 2500,
+        maxSearchResults: Int = 3,
+        maxSearchResultContentLength: Int = 500,
         timeout: Duration = Duration.ofSeconds(1),
     ): TavilyJinaWebIntegrationService =
         TavilyJinaWebIntegrationService(
@@ -146,20 +156,26 @@ class TavilyJinaWebIntegrationServiceTest {
             jinaReaderClient = JinaReaderClient(clientReturning(jinaResponse)),
             props = WebIntegrationProperties(
                 timeout = timeout,
-                maxContentLength = maxContentLength,
+                maxPageContentLength = maxPageContentLength,
+                maxSearchResults = maxSearchResults,
+                maxSearchResultContentLength = maxSearchResultContentLength,
             ),
         )
 
     private fun service(
         tavilyResponse: ClientResponse = jsonResponse("""{"results": []}"""),
         jinaResponse: ClientResponse = textResponse("page content"),
-        maxContentLength: Int = 4000,
+        maxPageContentLength: Int = 2500,
+        maxSearchResults: Int = 3,
+        maxSearchResultContentLength: Int = 500,
         timeout: Duration = Duration.ofSeconds(1),
     ): TavilyJinaWebIntegrationService =
         service(
             tavilyResponse = Mono.just(tavilyResponse),
             jinaResponse = Mono.just(jinaResponse),
-            maxContentLength = maxContentLength,
+            maxPageContentLength = maxPageContentLength,
+            maxSearchResults = maxSearchResults,
+            maxSearchResultContentLength = maxSearchResultContentLength,
             timeout = timeout,
         )
 

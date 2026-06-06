@@ -47,7 +47,7 @@ internal class TavilyJinaWebIntegrationService(
             .map { content -> content.trim() }
             .filter { content -> content.isNotEmpty() }
             .map { content ->
-                content.take(props.maxContentLength)
+                content.take(props.maxPageContentLength)
                     .also { log.debug("Successfully fetched {} chars", it.length) }
             }
             .onErrorResume { ex: Throwable ->
@@ -71,8 +71,10 @@ internal class TavilyJinaWebIntegrationService(
         if (results.isEmpty()) return "No results found for: $query"
 
         return results
-            .joinToString("\n\n") { r -> "**${r.title}** (${r.url})\n${r.content}" }
-            .take(props.maxContentLength)
+            .take(props.maxSearchResults)
+            .joinToString("\n\n") { r ->
+                "**${r.title}** (${r.url})\n${r.content.take(props.maxSearchResultContentLength)}"
+            }
     }
 
     private fun searchFailureMessage(query: String): String =

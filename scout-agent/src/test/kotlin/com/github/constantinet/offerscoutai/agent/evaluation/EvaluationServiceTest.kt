@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.retry.NonTransientAiException
 import org.springframework.core.io.ByteArrayResource
 import reactor.test.StepVerifier
 
@@ -94,6 +96,47 @@ class EvaluationServiceTest {
         assertThat(chatThread).contains("boundedElastic")
     }
 
+    @Test
+    fun `evaluate retries without tools when model produces invalid tool call`() {
+        `when`(chatClient.prompt()).thenReturn(requestSpec)
+        `when`(requestSpec.system(anyString())).thenReturn(requestSpec)
+        `when`(requestSpec.user(anyString())).thenReturn(requestSpec)
+        `when`(requestSpec.tools(webTool)).thenReturn(requestSpec)
+        `when`(requestSpec.call()).thenReturn(callResponseSpec)
+        `when`(callResponseSpec.content())
+            .thenThrow(NonTransientAiException("HTTP 400 code=tool_use_failed"))
+            .thenReturn("fallback evaluation")
+
+        StepVerifier.create(evaluationService.evaluate(OFFER_TEXT, PROFILE_CONTEXT))
+            .expectNext("fallback evaluation")
+            .verifyComplete()
+
+        verify(requestSpec, times(2)).system(anyString())
+        verify(requestSpec, times(2)).user(anyString())
+        verify(requestSpec).tools(webTool)
+        verify(requestSpec, times(2)).call()
+        verify(callResponseSpec, times(2)).content()
+    }
+
+    @Test
+    fun `evaluate keeps non tool ai errors for global exception handling`() {
+        `when`(chatClient.prompt()).thenReturn(requestSpec)
+        `when`(requestSpec.system(anyString())).thenReturn(requestSpec)
+        `when`(requestSpec.user(anyString())).thenReturn(requestSpec)
+        `when`(requestSpec.tools(webTool)).thenReturn(requestSpec)
+        `when`(requestSpec.call()).thenReturn(callResponseSpec)
+        `when`(callResponseSpec.content())
+            .thenThrow(NonTransientAiException("HTTP 400 model failed"))
+
+        StepVerifier.create(evaluationService.evaluate(OFFER_TEXT, PROFILE_CONTEXT))
+            .expectError(NonTransientAiException::class.java)
+            .verify()
+
+        verify(requestSpec).tools(webTool)
+        verify(requestSpec).call()
+        verify(callResponseSpec).content()
+    }
+
     private fun givenChatClientReturns(content: String?) {
         `when`(chatClient.prompt()).thenReturn(requestSpec)
         `when`(requestSpec.system(anyString())).thenReturn(requestSpec)
@@ -105,7 +148,7 @@ class EvaluationServiceTest {
 
     companion object {
         private const val SYSTEM_PROMPT = "Test system prompt"
-        private const val OFFER_TEXT = "Kotlin Spring job"
-        private const val PROFILE_CONTEXT = "Senior Kotlin developer"
+        private const val OFFER_TEXT = "Java job"
+        private const val PROFILE_CONTEXT = "Senior Java developer"
     }
 }

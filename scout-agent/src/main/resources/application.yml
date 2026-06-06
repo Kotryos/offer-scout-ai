@@ -9,7 +9,8 @@ spring:
       base-url: https://api.groq.com/openai
       chat:
         options:
-          model: llama-3.3-70b-versatile
+          model: meta-llama/llama-4-scout-17b-16e-instruct
+          temperature: 0.2
           parallel-tool-calls: false
 
 tavily:
@@ -21,7 +22,9 @@ jina:
   reader-base-url: https://r.jina.ai
 
 web-integration-commons:
-  max-content-length: 4000
+  max-page-content-length: 6000
+  max-search-results: 3
+  max-search-result-content-length: 500
   timeout: 15s
 
 logging:
