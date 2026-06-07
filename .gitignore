@@ -21,6 +21,11 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+scout-coordinator/manual-test-fixtures/
 
 # Secrets and local config
 .env
