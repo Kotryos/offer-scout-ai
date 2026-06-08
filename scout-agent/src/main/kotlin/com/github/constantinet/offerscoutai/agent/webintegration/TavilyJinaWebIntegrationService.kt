@@ -17,7 +17,7 @@ internal class TavilyJinaWebIntegrationService(
 ) : WebIntegrationService {
 
     override fun searchWeb(query: String): Mono<String> {
-        log.debug("Searching web")
+        log.info("Searching web")
         return tavilySearchClient.post()
             .uri("")
             .bodyValue(TavilySearchRequest(query = query))
@@ -37,7 +37,7 @@ internal class TavilyJinaWebIntegrationService(
     }
 
     override fun fetchPage(url: String): Mono<String> {
-        log.debug("Fetching page content")
+        log.info("Fetching page content")
         return jinaReaderClient
             .get()
             .uri("/$url")
@@ -48,7 +48,7 @@ internal class TavilyJinaWebIntegrationService(
             .filter { content -> content.isNotEmpty() }
             .map { content ->
                 content.take(props.maxPageContentLength)
-                    .also { log.debug("Successfully fetched {} chars", it.length) }
+                    .also { log.info("Fetched page content with {} chars", it.length) }
             }
             .onErrorResume { ex: Throwable ->
                 if (isRecoverableUpstreamFailure(ex)) {
@@ -67,7 +67,7 @@ internal class TavilyJinaWebIntegrationService(
             ex is DecodingException
 
     private fun formatSearchResults(query: String, results: List<TavilyResult>): String {
-        log.debug("Found {} web results", results.size)
+        log.info("Found {} web results", results.size)
         if (results.isEmpty()) return "No results found for: $query"
 
         return results

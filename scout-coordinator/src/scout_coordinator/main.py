@@ -9,6 +9,7 @@ from scout_coordinator.config import Settings, get_settings
 from scout_coordinator.integrations.gmail import GmailSmtpSender
 from scout_coordinator.integrations.resend import ResendClient
 from scout_coordinator.integrations.scout_agent import ScoutAgentClient
+from scout_coordinator.logging_context import configure_logging, correlation_id_scope
 from scout_coordinator.models import EmailProcessingTask, ResendWebhookEvent
 from scout_coordinator.processing.email_processor import EmailProcessor
 from scout_coordinator.tasks.auth import verify_task_request
@@ -91,7 +92,7 @@ class AppContainer:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    logging.basicConfig(level=settings.log_level.upper())
+    configure_logging(settings.log_level)
     container = AppContainer(settings)
     app.state.container = container
     yield
@@ -121,15 +122,21 @@ def create_app() -> FastAPI:
             return Response(status_code=status.HTTP_202_ACCEPTED)
 
         webhook_id = request.headers.get("svix-id")
+        correlation_id = event.data.email_id
         task_target_url = None
         if container.settings.task_backend == "cloud_tasks":
             task_target_url = container.settings.cloud_tasks_target_url or str(request.url_for("process_email_task"))
 
-        await container.task_publisher.enqueue(
-            EmailProcessingTask(email_id=event.data.email_id, webhook_id=webhook_id),
-            target_url=task_target_url,
-        )
-        log.info("Scheduled email %s from webhook %s", event.data.email_id, webhook_id)
+        with correlation_id_scope(correlation_id):
+            await container.task_publisher.enqueue(
+                EmailProcessingTask(
+                    email_id=event.data.email_id,
+                    webhook_id=webhook_id,
+                    correlation_id=correlation_id,
+                ),
+                target_url=task_target_url,
+            )
+            log.info("Scheduled email %s from webhook %s", event.data.email_id, webhook_id)
         return Response(status_code=status.HTTP_202_ACCEPTED)
 
     @app.post("/tasks/process-email")
@@ -139,7 +146,10 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task endpoint is disabled")
 
         await verify_task_request(request, container.settings)
-        await container.email_processor.process_email(task.email_id)
+        with correlation_id_scope(task.correlation_id):
+            log.info("Started processing email %s from Cloud Task", task.email_id)
+            await container.email_processor.process_email(task.email_id)
+            log.info("Finished processing email %s from Cloud Task", task.email_id)
         return {"status": "processed"}
 
     return app

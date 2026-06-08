@@ -89,6 +89,7 @@ def test_resend_webhook_schedules_email() -> None:
     assert len(container.task_publisher.items) == 1
     assert container.task_publisher.items[0].email_id == "email-1"
     assert container.task_publisher.items[0].webhook_id == "msg_test"
+    assert container.task_publisher.items[0].correlation_id == "email-1"
     assert container.task_publisher.target_urls == [None]
 
 

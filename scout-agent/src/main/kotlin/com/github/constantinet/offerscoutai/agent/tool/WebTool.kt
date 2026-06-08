@@ -22,9 +22,11 @@ class WebTool(
         )
         query: String,
     ): String {
-        log.debug("Invoking searchWeb tool")
-        return webIntegrationService.searchWeb(query).block()
+        log.info("Invoking search_web tool")
+        val result = webIntegrationService.searchWeb(query).block()
             ?: "Web search failed or timed out for: $query. Continue the evaluation using the offer text and any other available context."
+        log.info("search_web tool completed with {} chars", result.length)
+        return result
     }
 
     @Tool(
@@ -38,9 +40,11 @@ class WebTool(
         )
         url: String,
     ): String {
-        log.debug("Invoking fetchPage tool")
-        return webIntegrationService.fetchPage(url).block()
+        log.info("Invoking fetch_page tool")
+        val result = webIntegrationService.fetchPage(url).block()
             ?: "Could not extract content from URL $url. Proceed using only the information available from the URL slug and web search."
+        log.info("fetch_page tool completed with {} chars", result.length)
+        return result
     }
 
     companion object {

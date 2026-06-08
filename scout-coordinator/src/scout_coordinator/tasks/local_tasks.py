@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from scout_coordinator.models import EmailProcessingTask
+from scout_coordinator.logging_context import correlation_id_scope
 from scout_coordinator.processing.email_processor import EmailProcessor
 from scout_coordinator.tasks.publisher import TaskPublisher
 
@@ -30,17 +31,18 @@ class LocalTaskPublisher(TaskPublisher):
         task.add_done_callback(self._background_tasks.discard)
 
     async def _process_email_with_retries(self, task: EmailProcessingTask) -> None:
-        for attempt in range(1, self._retry_attempts + 1):
-            try:
-                await self._processor.process_email(task.email_id)
-                log.info("Processed email %s", task.email_id)
-                return
-            except Exception:
-                log.exception(
-                    "Failed to process email %s on attempt %s/%s",
-                    task.email_id,
-                    attempt,
-                    self._retry_attempts,
-                )
-                if attempt < self._retry_attempts:
-                    await asyncio.sleep(attempt * 2)
+        with correlation_id_scope(task.correlation_id):
+            for attempt in range(1, self._retry_attempts + 1):
+                try:
+                    await self._processor.process_email(task.email_id)
+                    log.info("Processed email %s", task.email_id)
+                    return
+                except Exception:
+                    log.exception(
+                        "Failed to process email %s on attempt %s/%s",
+                        task.email_id,
+                        attempt,
+                        self._retry_attempts,
+                    )
+                    if attempt < self._retry_attempts:
+                        await asyncio.sleep(attempt * 2)

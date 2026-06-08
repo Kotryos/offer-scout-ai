@@ -5,6 +5,7 @@ import pytest
 
 from scout_coordinator.integrations import scout_agent
 from scout_coordinator.integrations.scout_agent import ScoutAgentClient
+from scout_coordinator.logging_context import correlation_id_scope
 
 
 async def test_scout_agent_client_calls_agent_without_auth_header_in_none_auth_mode() -> None:
@@ -21,13 +22,15 @@ async def test_scout_agent_client_calls_agent_without_auth_header_in_none_auth_m
     )
 
     try:
-        evaluation = await client.evaluate_offer("offer", "profile")
+        with correlation_id_scope("email-1"):
+            evaluation = await client.evaluate_offer("offer", "profile")
     finally:
         await client.close()
 
     assert evaluation == "Worth pursuing."
     assert requests[0].url == "https://agent.example.com/offer/evaluation"
     assert requests[0].headers.get("authorization") is None
+    assert requests[0].headers["x-correlation-id"] == "email-1"
     assert json.loads(requests[0].read()) == {
         "offerText": "offer",
         "profileContext": "profile",
@@ -54,12 +57,14 @@ async def test_scout_agent_client_calls_agent_with_bearer_token_in_cloud_run_oid
     )
 
     try:
-        evaluation = await client.evaluate_offer("offer", "profile")
+        with correlation_id_scope("email-1"):
+            evaluation = await client.evaluate_offer("offer", "profile")
     finally:
         await client.close()
 
     assert evaluation == "Worth pursuing."
     assert requests[0].headers["authorization"] == "Bearer test-token"
+    assert requests[0].headers["x-correlation-id"] == "email-1"
     assert json.loads(requests[0].read()) == {
         "offerText": "offer",
         "profileContext": "profile",

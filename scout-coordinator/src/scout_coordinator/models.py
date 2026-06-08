@@ -46,6 +46,7 @@ class ReceivedEmail(BaseModel):
 class EmailProcessingTask(BaseModel):
     email_id: str
     webhook_id: str | None = None
+    correlation_id: str
 
 
 class AttachmentText(BaseModel):

@@ -3,6 +3,8 @@ import httpx
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 
+from scout_coordinator.logging_context import get_correlation_id
+
 
 class ScoutAgentClient:
     def __init__(
@@ -32,7 +34,7 @@ class ScoutAgentClient:
                 "offerText": offer_text,
                 "profileContext": profile_context,
             },
-            headers=await self._auth_headers(),
+            headers=await self._request_headers(),
         )
         response.raise_for_status()
         evaluation = response.json().get("evaluation")
@@ -42,6 +44,13 @@ class ScoutAgentClient:
 
     async def close(self) -> None:
         await self._client.aclose()
+
+    async def _request_headers(self) -> dict[str, str]:
+        headers = await self._auth_headers()
+        correlation_id = get_correlation_id()
+        if correlation_id != "-":
+            headers["X-Correlation-Id"] = correlation_id
+        return headers
 
     async def _auth_headers(self) -> dict[str, str]:
         if self._auth_mode == "none":

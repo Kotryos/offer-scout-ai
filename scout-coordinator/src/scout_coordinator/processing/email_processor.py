@@ -1,3 +1,5 @@
+import logging
+
 import anyio
 
 from scout_coordinator.attachments.extractor import extract_attachment_text, html_to_text, is_supported
@@ -5,6 +7,8 @@ from scout_coordinator.integrations.gmail import GmailSmtpSender
 from scout_coordinator.integrations.resend import ResendClient
 from scout_coordinator.integrations.scout_agent import ScoutAgentClient
 from scout_coordinator.models import AttachmentText, ReceivedAttachment, ReceivedEmail
+
+log = logging.getLogger(__name__)
 
 
 class EmailProcessor:
@@ -25,14 +29,19 @@ class EmailProcessor:
         self._max_offer_text_chars = max_offer_text_chars
 
     async def process_email(self, email_id: str) -> None:
+        log.info("Processing email %s", email_id)
         email = await self._resend_client.get_received_email(email_id)
+        log.info("Fetched email %s with %s attachment(s)", email_id, len(email.attachments))
+
         attachments = await self._extract_attachments(email)
         offer_text = self._build_offer_text(email, attachments)
+        log.info("Built offer text for email %s with %s chars", email_id, len(offer_text))
 
         evaluation = await self._scout_agent_client.evaluate_offer(
             offer_text=offer_text,
             profile_context=self._profile_context,
         )
+        log.info("Received evaluation for email %s with %s chars", email_id, len(evaluation))
 
         await self._gmail_sender.send_reply(
             to_email=email.from_email,
@@ -40,19 +49,23 @@ class EmailProcessor:
             body=evaluation,
             original_message_id=email.message_id,
         )
+        log.info("Sent evaluation reply for email %s", email_id)
 
     async def _extract_attachments(self, email: ReceivedEmail) -> list[AttachmentText]:
         results: list[AttachmentText] = []
 
         for attachment in email.attachments:
             if attachment.size > self._max_attachment_bytes:
+                log.info("Skipping attachment %s: attachment is too large", attachment.filename)
                 results.append(self._skipped(attachment, "attachment is too large"))
                 continue
 
             if not is_supported(attachment.content_type):
+                log.info("Skipping attachment %s: unsupported content type", attachment.filename)
                 results.append(self._skipped(attachment, "unsupported content type"))
                 continue
 
+            log.info("Extracting attachment %s", attachment.filename)
             download_url = await self._resend_client.get_attachment_download_url(email.id, attachment.id)
             data = await self._resend_client.download_attachment(download_url)
 
@@ -63,6 +76,7 @@ class EmailProcessor:
                 data,
             )
             results.append(extracted)
+            log.info("Extracted attachment %s with %s chars", attachment.filename, len(extracted.text))
 
         return results
 

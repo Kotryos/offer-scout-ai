@@ -32,7 +32,6 @@ class EvaluationService(
         return Mono.fromCallable { evaluateWithToolFallback(userMessage) }
             .subscribeOn(Schedulers.boundedElastic())
             .doOnSuccess { log.info("Evaluation completed") }
-            .doOnError { e -> log.error("Evaluation error", e) }
     }
 
     private fun evaluateWithToolFallback(userMessage: String): String =
@@ -48,23 +47,33 @@ class EvaluationService(
         }
 
     private fun evaluateWithTools(userMessage: String): String =
-        chatClient
-            .prompt()
-            .system(systemPrompt)
-            .user(userMessage)
-            .tools(webTool)
-            .call()
-            .content()
-            .orEmpty()
+        run {
+            log.info("Calling model with web tools enabled")
+            val content = chatClient
+                .prompt()
+                .system(systemPrompt)
+                .user(userMessage)
+                .tools(webTool)
+                .call()
+                .content()
+                .orEmpty()
+            log.info("Model returned evaluation with {} chars", content.length)
+            content
+        }
 
     private fun evaluateWithoutTools(userMessage: String): String =
-        chatClient
-            .prompt()
-            .system(systemPromptWithoutTools)
-            .user(userMessage)
-            .call()
-            .content()
-            .orEmpty()
+        run {
+            log.info("Calling model without web tools")
+            val content = chatClient
+                .prompt()
+                .system(systemPromptWithoutTools)
+                .user(userMessage)
+                .call()
+                .content()
+                .orEmpty()
+            log.info("Model returned fallback evaluation with {} chars", content.length)
+            content
+        }
 
     private fun NonTransientAiException.isToolUseFailed(): Boolean =
         message?.contains(TOOL_USE_FAILED) == true

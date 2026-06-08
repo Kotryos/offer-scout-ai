@@ -38,7 +38,7 @@ async def test_cloud_tasks_publisher_creates_http_task() -> None:
         client=client,  # type: ignore[arg-type]
     )
 
-    await publisher.enqueue(EmailProcessingTask(email_id="email-1", webhook_id="webhook-1"))
+    await publisher.enqueue(EmailProcessingTask(email_id="email-1", webhook_id="webhook-1", correlation_id="email-1"))
 
     assert client.created is not None
     assert client.created["parent"] == "projects/project-1/locations/europe-west1/queues/email-processing"
@@ -52,6 +52,7 @@ async def test_cloud_tasks_publisher_creates_http_task() -> None:
     assert json.loads(cloud_task.http_request.body) == {
         "email_id": "email-1",
         "webhook_id": "webhook-1",
+        "correlation_id": "email-1",
     }
     assert cloud_task.dispatch_deadline.seconds == 600
 
@@ -69,7 +70,7 @@ async def test_cloud_tasks_publisher_uses_enqueue_target_url_when_not_configured
     )
 
     await publisher.enqueue(
-        EmailProcessingTask(email_id="email-1", webhook_id="webhook-1"),
+        EmailProcessingTask(email_id="email-1", webhook_id="webhook-1", correlation_id="email-1"),
         target_url="https://coordinator.example.com/tasks/process-email",
     )
 
@@ -91,7 +92,7 @@ async def test_cloud_tasks_publisher_requires_target_url() -> None:
     )
 
     try:
-        await publisher.enqueue(EmailProcessingTask(email_id="email-1", webhook_id="webhook-1"))
+        await publisher.enqueue(EmailProcessingTask(email_id="email-1", webhook_id="webhook-1", correlation_id="email-1"))
     except ValueError as exc:
         assert str(exc) == "Cloud Task target URL is required"
     else:
@@ -109,4 +110,4 @@ async def test_cloud_tasks_publisher_ignores_existing_task() -> None:
         client=AlreadyExistsCloudTasksClient(),  # type: ignore[arg-type]
     )
 
-    await publisher.enqueue(EmailProcessingTask(email_id="email-1", webhook_id="webhook-1"))
+    await publisher.enqueue(EmailProcessingTask(email_id="email-1", webhook_id="webhook-1", correlation_id="email-1"))

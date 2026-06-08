@@ -1,14 +1,17 @@
 from fastapi.testclient import TestClient
 
+from scout_coordinator.logging_context import get_correlation_id
 from scout_coordinator.main import create_app
 
 
 class FakeProcessor:
     def __init__(self) -> None:
         self.email_ids = []
+        self.correlation_ids = []
 
     async def process_email(self, email_id: str) -> None:
         self.email_ids.append(email_id)
+        self.correlation_ids.append(get_correlation_id())
 
 
 class FakeContainer:
@@ -54,12 +57,13 @@ def test_task_endpoint_processes_email_after_cloud_tasks_auth(monkeypatch) -> No
     with _client_with_container(container) as client:
         response = client.post(
             "/tasks/process-email",
-            json={"email_id": "email-1", "webhook_id": "webhook-1"},
+            json={"email_id": "email-1", "webhook_id": "webhook-1", "correlation_id": "email-1"},
         )
 
     assert response.status_code == 200
     assert response.json() == {"status": "processed"}
     assert container.email_processor.email_ids == ["email-1"]
+    assert container.email_processor.correlation_ids == ["email-1"]
 
 
 def test_task_endpoint_is_disabled_in_local_mode() -> None:
@@ -68,7 +72,7 @@ def test_task_endpoint_is_disabled_in_local_mode() -> None:
     with _client_with_container(container) as client:
         response = client.post(
             "/tasks/process-email",
-            json={"email_id": "email-1", "webhook_id": "webhook-1"},
+            json={"email_id": "email-1", "webhook_id": "webhook-1", "correlation_id": "email-1"},
         )
 
     assert response.status_code == 404
@@ -81,7 +85,7 @@ def test_task_endpoint_rejects_cloud_tasks_request_without_bearer_token() -> Non
     with _client_with_container(container) as client:
         response = client.post(
             "/tasks/process-email",
-            json={"email_id": "email-1"},
+            json={"email_id": "email-1", "correlation_id": "email-1"},
         )
 
     assert response.status_code == 401

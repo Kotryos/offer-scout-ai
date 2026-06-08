@@ -29,7 +29,7 @@ class CorrelationIdFilter : WebFilter {
     }
 
     companion object {
-        const val HEADER = "X-Correlation-ID"
+        const val HEADER = "X-Correlation-Id"
         const val MDC_KEY = "correlationId"
 
         init {

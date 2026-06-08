@@ -36,6 +36,7 @@ class CloudTasksPublisher(TaskPublisher):
         cloud_task = self._build_task(task, task_target_url)
         try:
             await self._client.create_task(parent=self._parent, task=cloud_task)
+            log.info("Created Cloud Task for email %s", task.email_id)
         except AlreadyExists:
             log.info("Cloud Task already exists for email %s", task.email_id)
 
