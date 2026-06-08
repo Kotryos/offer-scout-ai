@@ -96,6 +96,10 @@ resource "google_cloud_tasks_queue" "email_processing" {
     max_doublings      = 3
     max_retry_duration = "1800s"
   }
+
+  stackdriver_logging_config {
+    sampling_ratio = 1.0
+  }
 }
 
 resource "google_service_account_iam_member" "coordinator_can_use_tasks_invoker" {
