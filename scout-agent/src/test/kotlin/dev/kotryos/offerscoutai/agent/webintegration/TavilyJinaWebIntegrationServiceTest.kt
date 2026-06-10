@@ -1,5 +1,6 @@
 package dev.kotryos.offerscoutai.agent.webintegration
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.jupiter.api.Test
 import org.assertj.core.api.Assertions.assertThat
 import org.springframework.http.HttpStatus
@@ -34,6 +35,19 @@ class TavilyJinaWebIntegrationServiceTest {
         StepVerifier.create(service.searchWeb(TEST_COMPANY_QUERY))
             .expectNext("**ExampleCo News** (https://example.com/news)\nCompany update")
             .verifyComplete()
+    }
+
+    @Test
+    fun `searchWeb request serializes max results for tavily`() {
+        val json = jacksonObjectMapper().writeValueAsString(
+            TavilyJinaWebIntegrationService.TavilySearchRequest(
+                query = TEST_COMPANY_QUERY,
+                maxResults = 3,
+            )
+        )
+
+        assertThat(json).contains("\"query\":\"$TEST_COMPANY_QUERY\"")
+        assertThat(json).contains("\"max_results\":3")
     }
 
     @Test

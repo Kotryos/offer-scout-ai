@@ -1,6 +1,7 @@
 package dev.kotryos.offerscoutai.agent.webintegration
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.slf4j.LoggerFactory
 import org.springframework.core.codec.DecodingException
 import reactor.core.publisher.Mono
@@ -20,7 +21,7 @@ internal class TavilyJinaWebIntegrationService(
         log.info("Searching web")
         return tavilySearchClient.post()
             .uri("")
-            .bodyValue(TavilySearchRequest(query = query))
+            .bodyValue(TavilySearchRequest(query = query, maxResults = props.maxSearchResults))
             .retrieve()
             .bodyToMono<TavilySearchResponse>()
             .timeout(props.timeout)
@@ -67,7 +68,7 @@ internal class TavilyJinaWebIntegrationService(
             ex is DecodingException
 
     private fun formatSearchResults(query: String, results: List<TavilyResult>): String {
-        log.info("Found {} web results", results.size)
+        log.info("Found {} web results, using {}", results.size, minOf(results.size, props.maxSearchResults))
         if (results.isEmpty()) return "No results found for: $query"
 
         return results
@@ -85,7 +86,9 @@ internal class TavilyJinaWebIntegrationService(
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class TavilySearchRequest(
-        val query: String
+        val query: String,
+        @JsonProperty("max_results")
+        val maxResults: Int,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
